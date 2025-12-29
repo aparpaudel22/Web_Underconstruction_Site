@@ -18,7 +18,7 @@ canvas {
     position: fixed;
     inset: 0;
     z-index: 1;
-    touch-action: none; /* important for mobile */
+    touch-action: none; /* prevents scrolling */
 }
 
 .overlay {
@@ -94,6 +94,27 @@ footer {
     gap: 10px;
 }
 
+/* Mobile arrow buttons */
+.mobile-arrows {
+    position: fixed;
+    bottom: 40px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    z-index: 5;
+    display: none; /* hidden by default */
+}
+
+.arrow-btn {
+    background: #0066ffbe;
+    border: none;
+    padding: 20px 26px;
+    font-size: 1.5rem;
+    border-radius: 50%;
+    user-select: none;
+}
+
 @keyframes pulse {
     0% {opacity: 0.6;}
     50% {opacity: 1;}
@@ -125,6 +146,12 @@ footer {
 <div class="controls" id="controls">
     <button id="muteBtn" onclick="toggleMusic()">Mute</button>
     <button onclick="exitGame()">Exit</button>
+</div>
+
+<!-- Mobile Arrow Buttons -->
+<div class="mobile-arrows" id="mobileArrows">
+    <button class="arrow-btn" id="leftArrow">⬅️</button>
+    <button class="arrow-btn" id="rightArrow">➡️</button>
 </div>
 
 <footer>© 2025 Apar Paudel. All rights reserved.</footer>
@@ -169,16 +196,22 @@ function init() {
     const overlay=document.getElementById("overlay");
     overlay.classList.add("top");
 
-    // Hide all overlay except mainText
     const overlayContent=document.getElementById("overlayContent");
     Array.from(overlayContent.children).forEach(c=>{
         if(c.id!=="mainText" && c.id!=="startBtn") c.style.display="none";
     });
     document.getElementById("startBtn").style.display="none";
 
-    // Hide GAME OVER and Play Again
     document.getElementById("gameOverText").style.display = "none";
     document.getElementById("failActions").style.display = "none";
+
+    // Show mobile arrows if device width < 768px
+    const mobileArrows = document.getElementById("mobileArrows");
+    if(window.innerWidth < 768) {
+        mobileArrows.style.display = "flex";
+    } else {
+        mobileArrows.style.display = "none";
+    }
 }
 
 /* INPUT */
@@ -187,13 +220,14 @@ function moveCatcher(dx){
     if(catcher.x<0) catcher.x=0;
     if(catcher.x+catcher.width>canvas.width) catcher.x = canvas.width - catcher.width;
 }
+
 addEventListener("keydown", e=>{
     if(!running) return;
     if(e.key==="ArrowLeft") moveCatcher(-40);
     if(e.key==="ArrowRight") moveCatcher(40);
 });
 
-// Mobile Touch Fix
+// Mobile Touch
 let touchStartX = null;
 canvas.addEventListener("touchstart", e => {
     if (!running) return;
@@ -207,13 +241,32 @@ canvas.addEventListener("touchmove", e => {
 
     const currentX = e.touches[0].clientX;
     const dx = currentX - touchStartX;
-    moveCatcher(dx * 0.5); // slower and smooth movement
+    moveCatcher(dx * 0.5);
     touchStartX = currentX;
 }, { passive: false });
 
 canvas.addEventListener("touchend", e => {
     touchStartX = null;
 }, { passive: false });
+
+// Mobile Arrow Buttons
+document.getElementById("leftArrow").addEventListener("touchstart", e=>{
+    e.preventDefault();
+    moveCatcher(-10);
+    leftInterval = setInterval(()=>moveCatcher(-10), 50);
+});
+document.getElementById("leftArrow").addEventListener("touchend", e=>{
+    clearInterval(leftInterval);
+});
+
+document.getElementById("rightArrow").addEventListener("touchstart", e=>{
+    e.preventDefault();
+    moveCatcher(10);
+    rightInterval = setInterval(()=>moveCatcher(10), 50);
+});
+document.getElementById("rightArrow").addEventListener("touchend", e=>{
+    clearInterval(rightInterval);
+});
 
 /* SPAWN BLOCK */
 function spawnBlock(){
@@ -271,7 +324,7 @@ function startGame(){
     loop();
 
     music.currentTime=0;
-    music.play().catch(()=>{}); // ignore autoplay errors on mobile
+    music.play().catch(()=>{});
 }
 
 /* FAIL GAME */
