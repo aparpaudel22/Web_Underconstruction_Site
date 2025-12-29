@@ -18,7 +18,7 @@ canvas {
     position: fixed;
     inset: 0;
     z-index: 1;
-    touch-action: none; /* prevents scrolling */
+    touch-action: none;
 }
 
 .overlay {
@@ -52,16 +52,29 @@ h1 {
     font-size: 1.2rem;
 }
 
+#gameOverContainer {
+    display: none; /* hidden initially */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    z-index: 10;
+}
+
 #gameOverText {
-    font-size: 70px;
+    font-size: clamp(40px, 8vw, 80px);
     font-weight: bold;
     color: rgba(255, 0, 0, 0.938);
     margin-bottom: 20px;
-    display: none;
 }
 
-.actions {
-    margin-top: 18px;
+#failActions button {
+    font-size: clamp(16px, 3vw, 24px);
+    padding: 12px 26px;
 }
 
 button {
@@ -95,24 +108,30 @@ footer {
 }
 
 /* Mobile arrow buttons */
-.mobile-arrows {
+#leftArrow {
     position: fixed;
-    bottom: 40px;
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    gap: 30px;
+    bottom: 20px;
+    left: 20px;
     z-index: 5;
-    display: none; /* hidden by default */
-}
-
-.arrow-btn {
     background: #0066ffbe;
     border: none;
-    padding: 20px 26px;
+    padding: 20px;
     font-size: 1.5rem;
     border-radius: 50%;
-    user-select: none;
+    display: none;
+}
+
+#rightArrow {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 5;
+    background: #0066ffbe;
+    border: none;
+    padding: 20px;
+    font-size: 1.5rem;
+    border-radius: 50%;
+    display: none;
 }
 
 @keyframes pulse {
@@ -133,12 +152,14 @@ footer {
         <p>While you’re here, feel free to play a short game.</p>
         <p>Click Start Game below. Catch the blocks falling down.</p>
         <p>To play move the Catcher LEFT AND RIGHT.</p>
-        <div id="gameOverText">GAME OVER</div>
+        <div id="gameOverContainer">
+            <div id="gameOverText">GAME OVER</div>
+            <div class="actions" id="failActions">
+                <button id="playAgainBtn" onclick="startGame()">Play Again</button>
+            </div>
+        </div>
         <div class="actions">
             <button id="startBtn" onclick="startGame()">Start Game</button>
-        </div>
-        <div class="actions" id="failActions" style="display:none;">
-            <button id="playAgainBtn" onclick="startGame()">Play Again</button>
         </div>
     </div>
 </div>
@@ -149,10 +170,8 @@ footer {
 </div>
 
 <!-- Mobile Arrow Buttons -->
-<div class="mobile-arrows" id="mobileArrows">
-    <button class="arrow-btn" id="leftArrow">⬅️</button>
-    <button class="arrow-btn" id="rightArrow">➡️</button>
-</div>
+<button id="leftArrow">⬅️</button>
+<button id="rightArrow">➡️</button>
 
 <footer>© 2025 Apar Paudel. All rights reserved.</footer>
 
@@ -198,19 +217,19 @@ function init() {
 
     const overlayContent=document.getElementById("overlayContent");
     Array.from(overlayContent.children).forEach(c=>{
-        if(c.id!=="mainText" && c.id!=="startBtn") c.style.display="none";
+        if(c.id!=="mainText" && c.id!=="startBtn" && c.id!=="gameOverContainer") c.style.display="none";
     });
     document.getElementById("startBtn").style.display="none";
 
-    document.getElementById("gameOverText").style.display = "none";
-    document.getElementById("failActions").style.display = "none";
+    document.getElementById("gameOverContainer").style.display="none";
 
-    // Show mobile arrows if device width < 768px
-    const mobileArrows = document.getElementById("mobileArrows");
-    if(window.innerWidth < 768) {
-        mobileArrows.style.display = "flex";
+    // Show mobile arrows only on small devices
+    if(window.innerWidth < 768){
+        document.getElementById("leftArrow").style.display = "block";
+        document.getElementById("rightArrow").style.display = "block";
     } else {
-        mobileArrows.style.display = "none";
+        document.getElementById("leftArrow").style.display = "none";
+        document.getElementById("rightArrow").style.display = "none";
     }
 }
 
@@ -220,7 +239,6 @@ function moveCatcher(dx){
     if(catcher.x<0) catcher.x=0;
     if(catcher.x+catcher.width>canvas.width) catcher.x = canvas.width - catcher.width;
 }
-
 addEventListener("keydown", e=>{
     if(!running) return;
     if(e.key==="ArrowLeft") moveCatcher(-40);
@@ -238,36 +256,28 @@ canvas.addEventListener("touchstart", e => {
 canvas.addEventListener("touchmove", e => {
     if (!running || touchStartX === null) return;
     e.preventDefault();
-
-    const currentX = e.touches[0].clientX;
-    const dx = currentX - touchStartX;
-    moveCatcher(dx * 0.5);
-    touchStartX = currentX;
+    const dx = e.touches[0].clientX - touchStartX;
+    moveCatcher(dx*0.5);
+    touchStartX = e.touches[0].clientX;
 }, { passive: false });
 
-canvas.addEventListener("touchend", e => {
-    touchStartX = null;
-}, { passive: false });
+canvas.addEventListener("touchend", e => { touchStartX = null; }, { passive: false });
 
-// Mobile Arrow Buttons
+// Mobile arrow buttons (mobile only)
 let leftInterval, rightInterval;
 document.getElementById("leftArrow").addEventListener("touchstart", e=>{
     e.preventDefault();
     moveCatcher(-10);
     leftInterval = setInterval(()=>moveCatcher(-10), 50);
 });
-document.getElementById("leftArrow").addEventListener("touchend", e=>{
-    clearInterval(leftInterval);
-});
+document.getElementById("leftArrow").addEventListener("touchend", e=>{ clearInterval(leftInterval); });
 
 document.getElementById("rightArrow").addEventListener("touchstart", e=>{
     e.preventDefault();
     moveCatcher(10);
     rightInterval = setInterval(()=>moveCatcher(10), 50);
 });
-document.getElementById("rightArrow").addEventListener("touchend", e=>{
-    clearInterval(rightInterval);
-});
+document.getElementById("rightArrow").addEventListener("touchend", e=>{ clearInterval(rightInterval); });
 
 /* SPAWN BLOCK */
 function spawnBlock(){
@@ -323,7 +333,6 @@ function startGame(){
     document.getElementById("controls").style.display="flex";
     init();
     loop();
-
     music.currentTime=0;
     music.play().catch(()=>{});
 }
@@ -345,16 +354,12 @@ function failGame(){
 
     blocks=[];
 
-    const overlay=document.getElementById("overlay");
-    overlay.classList.add("top"); // keep overlay at top
-    const overlayContent=document.getElementById("overlayContent");
+    // Show Game Over container in center
+    document.getElementById("gameOverContainer").style.display = "flex";
 
-    // Show only main text at top
-    Array.from(overlayContent.children).forEach(c=>{
-        if(c.id==="mainText") c.style.display="block";
-        else if(c.id==="failActions" || c.id==="gameOverText") c.style.display="block"; // keep game over in middle
-        else c.style.display="none";
-    });
+    // Hide header and main text
+    document.querySelector("#overlay h1").style.display="none";
+    document.getElementById("mainText").style.display="none";
 }
 
 /* EXIT GAME */
@@ -367,16 +372,22 @@ function exitGame(){
 
     const overlay=document.getElementById("overlay");
     overlay.classList.remove("top");
+
+    document.querySelector("#overlay h1").style.display="block";
+    document.getElementById("mainText").style.display="block";
+
+    document.getElementById("gameOverContainer").style.display="none";
+
     const overlayContent=document.getElementById("overlayContent");
-    Array.from(overlayContent.children).forEach(c=>c.style.display="block");
+    Array.from(overlayContent.children).forEach(c=>{
+        if(c.id!=="gameOverContainer") c.style.display="block";
+    });
 
     const startBtn=document.getElementById("startBtn");
     startBtn.textContent="Start Game";
     startBtn.style.display="inline-block";
 
     document.getElementById("controls").style.display="none";
-    document.getElementById("failActions").style.display="none";
-    document.getElementById("gameOverText").style.display="none";
 }
 
 /* TOGGLE MUSIC */
