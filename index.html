@@ -250,6 +250,7 @@ canvas.addEventListener("touchend", e => {
 }, { passive: false });
 
 // Mobile Arrow Buttons
+let leftInterval, rightInterval;
 document.getElementById("leftArrow").addEventListener("touchstart", e=>{
     e.preventDefault();
     moveCatcher(-10);
@@ -345,16 +346,15 @@ function failGame(){
     blocks=[];
 
     const overlay=document.getElementById("overlay");
-    overlay.classList.remove("top");
-
+    overlay.classList.add("top"); // keep overlay at top
     const overlayContent=document.getElementById("overlayContent");
+
+    // Show only main text at top
     Array.from(overlayContent.children).forEach(c=>{
-        if(c.id==="mainText" || c.id==="failActions") c.style.display="block";
+        if(c.id==="mainText") c.style.display="block";
+        else if(c.id==="failActions" || c.id==="gameOverText") c.style.display="block"; // keep game over in middle
         else c.style.display="none";
     });
-
-    document.getElementById("gameOverText").style.display = "block";
-    document.getElementById("failActions").style.display = "block";
 }
 
 /* EXIT GAME */
