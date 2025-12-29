@@ -18,7 +18,7 @@ canvas {
     position: fixed;
     inset: 0;
     z-index: 1;
-    touch-action: none;
+    touch-action: none; /* important for mobile */
 }
 
 .overlay {
@@ -183,7 +183,7 @@ function init() {
 
 /* INPUT */
 function moveCatcher(dx){
-    catcher.x += dx * 0.8;
+    catcher.x += dx;
     if(catcher.x<0) catcher.x=0;
     if(catcher.x+catcher.width>canvas.width) catcher.x = canvas.width - catcher.width;
 }
@@ -193,29 +193,27 @@ addEventListener("keydown", e=>{
     if(e.key==="ArrowRight") moveCatcher(40);
 });
 
-// Mobile
+// Mobile Touch Fix
+let touchStartX = null;
 canvas.addEventListener("touchstart", e => {
     if (!running) return;
-    e.preventDefault(); // 🚫 stop scrolling
+    e.preventDefault();
     touchStartX = e.touches[0].clientX;
 }, { passive: false });
 
 canvas.addEventListener("touchmove", e => {
     if (!running || touchStartX === null) return;
-    e.preventDefault(); // 🚫 stop scrolling
+    e.preventDefault();
 
-    let currentX = e.touches[0].clientX;
-    let dx = currentX - touchStartX;
-
-    moveCatcher(dx);
+    const currentX = e.touches[0].clientX;
+    const dx = currentX - touchStartX;
+    moveCatcher(dx * 0.5); // slower and smooth movement
     touchStartX = currentX;
 }, { passive: false });
 
 canvas.addEventListener("touchend", e => {
     touchStartX = null;
-});
-
-
+}, { passive: false });
 
 /* SPAWN BLOCK */
 function spawnBlock(){
@@ -237,7 +235,6 @@ function loop(){
     ctx.fillStyle="#05080c";
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    // Increase complexity and speed every 70 score by 15%
     difficultyMultiplier = 1 + Math.floor(score/70)*0.15;
 
     if(Math.random()<0.015*difficultyMultiplier) spawnBlock();
@@ -258,7 +255,6 @@ function loop(){
         if(b.y>canvas.height) failGame();
     });
 
-    // Score and High Score on top-left
     ctx.fillStyle="white";
     ctx.font="20px Arial";
     ctx.textAlign="left";
@@ -271,10 +267,11 @@ function loop(){
 /* START GAME */
 function startGame(){
     document.getElementById("controls").style.display="flex";
-    music.currentTime=0;
-    music.play();
     init();
     loop();
+
+    music.currentTime=0;
+    music.play().catch(()=>{}); // ignore autoplay errors on mobile
 }
 
 /* FAIL GAME */
