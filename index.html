@@ -247,10 +247,14 @@ addEventListener("keydown", e=>{
 
 // Mobile Touch
 let touchStartX = null;
+let touchStartY = null;
+let touchEndY = null;
+
 canvas.addEventListener("touchstart", e => {
     if (!running) return;
     e.preventDefault();
     touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
 }, { passive: false });
 
 canvas.addEventListener("touchmove", e => {
@@ -259,9 +263,25 @@ canvas.addEventListener("touchmove", e => {
     const dx = e.touches[0].clientX - touchStartX;
     moveCatcher(dx*0.5);
     touchStartX = e.touches[0].clientX;
+
+    // Track vertical move for slide refresh
+    touchEndY = e.touches[0].clientY;
 }, { passive: false });
 
-canvas.addEventListener("touchend", e => { touchStartX = null; }, { passive: false });
+canvas.addEventListener("touchend", e => {
+    // Reset touch X
+    touchStartX = null;
+
+    // Slide refresh detection
+    if(touchStartY !== null && touchEndY !== null){
+        let distance = touchEndY - touchStartY;
+        if(distance > 100){ // swipe down threshold
+            exitGame(); // reset overlay/game instead of full reload
+        }
+    }
+    touchStartY = null;
+    touchEndY = null;
+}, { passive: false });
 
 // Mobile arrow buttons (mobile only)
 let leftInterval, rightInterval;
