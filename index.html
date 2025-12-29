@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Under Construction | Apar Paudel</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+    margin: 0;
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: #000000e1;
+    overflow: hidden;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+canvas {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+}
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    pointer-events: auto;
+    transition: all 0.8s ease;
+}
+
+.overlay.top {
+    justify-content: flex-start;
+    top: 20px;
+}
+
+h1 {
+    font-size: 2.8rem;
+    margin-bottom: 10px;
+    animation: pulse 2s infinite;
+}
+
+#mainText {
+    opacity: 0.85;
+    margin: 6px 0;
+    transition: all 0.8s ease;
+    font-size: 1.2rem;
+}
+
+#gameOverText {
+    font-size: 70px;
+    font-weight: bold;
+    color: rgba(255, 0, 0, 0.938);
+    margin-bottom: 20px;
+    display: none;
+}
+
+.actions {
+    margin-top: 18px;
+}
+
+button {
+    background: #0066ffbe;
+    border: none;
+    padding: 12px 26px;
+    font-size: 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    margin: 6px;
+    z-index: 4;
+}
+
+footer {
+    position: fixed;
+    bottom: 12px;
+    width: 100%;
+    text-align: center;
+    font-size: 0.85rem;
+    opacity: 0.45;
+    z-index: 2;
+}
+
+.controls {
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    z-index: 3;
+    display: none;
+    gap: 10px;
+}
+
+@keyframes pulse {
+    0% {opacity: 0.6;}
+    50% {opacity: 1;}
+    100% {opacity: 0.6;}
+}
+</style>
+</head>
+<body>
+
+<canvas id="game"></canvas>
+
+<div class="overlay" id="overlay">
+    <h1>🚧 Under Construction 🚧</h1>
+    <div id="overlayContent">
+        <p id="mainText">This website is currently being built.</p>
+        <p>While you’re here, feel free to play a short game.</p>
+        <p>Click Start Game below. Catch the blocks falling down.</p>
+        <p>To play move the Catcher LEFT AND RIGHT.</p>
+        <div id="gameOverText">GAME OVER</div>
+        <div class="actions">
+            <button id="startBtn" onclick="startGame()">Start Game</button>
+        </div>
+        <div class="actions" id="failActions" style="display:none;">
+            <button id="playAgainBtn" onclick="startGame()">Play Again</button>
+        </div>
+    </div>
+</div>
+
+<div class="controls" id="controls">
+    <button id="muteBtn" onclick="toggleMusic()">Mute</button>
+    <button onclick="exitGame()">Exit</button>
+</div>
+
+<footer>© 2025 Apar Paudel. All rights reserved.</footer>
+
+<audio id="bgMusic" src="assets/Music.mp3.mp3" loop></audio>
+<audio id="failMusic" src="assets/Music2.mp3.mp3"></audio>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const music = document.getElementById("bgMusic");
+const failMusic = document.getElementById("failMusic");
+
+let blocks = [];
+let lastBlockY = -40;
+let zoneWidth = 300, zoneX, zoneMaxX;
+
+function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    zoneX = canvas.width/2 - zoneWidth/2;
+    zoneMaxX = zoneX + zoneWidth - 40;
+}
+resize();
+window.addEventListener("resize", resize);
+
+let catcher, score = 0, highScore = parseInt(localStorage.getItem("highScore")) || 0, speed = 1, running = false;
+let difficultyMultiplier = 1;
+let failed = false;
+
+/* INIT GAME */
+function init() {
+    catcher = { x: canvas.width/2 - 70, y: canvas.height - 60, width: 90, height: 9 };
+    blocks = [];
+    lastBlockY = canvas.height * 0.1; 
+    score = 0;
+    speed = 1;
+    difficultyMultiplier = 1;
+    running = true;
+    failed = false;
+
+    const overlay=document.getElementById("overlay");
+    overlay.classList.add("top");
+
+    // Hide all overlay except mainText
+    const overlayContent=document.getElementById("overlayContent");
+    Array.from(overlayContent.children).forEach(c=>{
+        if(c.id!=="mainText" && c.id!=="startBtn") c.style.display="none";
+    });
+    document.getElementById("startBtn").style.display="none";
+
+    // Hide GAME OVER and Play Again
+    document.getElementById("gameOverText").style.display = "none";
+    document.getElementById("failActions").style.display = "none";
+}
+
+/* INPUT */
+function moveCatcher(dx){
+    catcher.x += dx;
+    if(catcher.x<0) catcher.x=0;
+    if(catcher.x+catcher.width>canvas.width) catcher.x = canvas.width - catcher.width;
+}
+addEventListener("keydown", e=>{
+    if(!running) return;
+    if(e.key==="ArrowLeft") moveCatcher(-40);
+    if(e.key==="ArrowRight") moveCatcher(40);
+});
+
+// Mobile
+let touchStartX = null;
+canvas.addEventListener("touchstart", e => { touchStartX = e.touches[0].clientX; });
+canvas.addEventListener("touchmove", e => {
+    if(!running || touchStartX===null) return;
+    let dx = e.touches[0].clientX - touchStartX;
+    moveCatcher(dx);
+    touchStartX = e.touches[0].clientX;
+});
+canvas.addEventListener("touchend", e=>{ touchStartX=null; });
+
+/* SPAWN BLOCK */
+function spawnBlock(){
+    const maxTries = 10;
+    let tries=0, newX;
+    do{
+        newX = Math.random()*(zoneMaxX-zoneX)+zoneX;
+        tries++;
+        var overlap = blocks.some(b=>Math.abs(b.x-newX)<40+10);
+    }while(overlap && tries<maxTries);
+    let newBlockY = lastBlockY - 80;
+    blocks.push({x:newX, y:newBlockY, size:40});
+    lastBlockY = newBlockY;
+}
+
+/* GAME LOOP */
+function loop(){
+    if(!running) return;
+    ctx.fillStyle="#05080c";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    // Increase complexity and speed every 70 score by 15%
+    difficultyMultiplier = 1 + Math.floor(score/70)*0.15;
+
+    if(Math.random()<0.015*difficultyMultiplier) spawnBlock();
+
+    ctx.fillStyle="#87CEEB";
+    ctx.fillRect(catcher.x, catcher.y, catcher.width, catcher.height);
+
+    blocks.forEach((b,i)=>{
+        b.y += speed*difficultyMultiplier;
+        ctx.fillStyle="#ff4d4d";
+        ctx.fillRect(b.x,b.y,b.size,b.size);
+
+        if(b.y+b.size >= catcher.y && b.x+b.size>catcher.x && b.x<catcher.x+catcher.width){
+            blocks.splice(i,1);
+            score +=10;
+        }
+
+        if(b.y>canvas.height) failGame();
+    });
+
+    // Score and High Score on top-left
+    ctx.fillStyle="white";
+    ctx.font="20px Arial";
+    ctx.textAlign="left";
+    ctx.fillText("Score: "+score,20,30);
+    ctx.fillText("High Score: "+highScore,20,60);
+
+    requestAnimationFrame(loop);
+}
+
+/* START GAME */
+function startGame(){
+    document.getElementById("controls").style.display="flex";
+    music.currentTime=0;
+    music.play();
+    init();
+    loop();
+}
+
+/* FAIL GAME */
+function failGame(){
+    if(failed) return;
+    failed = true;
+    running=false;
+    music.pause();
+
+    failMusic.currentTime=0;
+    failMusic.play().catch(e=>console.log("Fail music error:",e));
+
+    if(score>highScore){
+        highScore=score;
+        localStorage.setItem("highScore",highScore);
+    }
+
+    blocks=[];
+
+    const overlay=document.getElementById("overlay");
+    overlay.classList.remove("top");
+
+    const overlayContent=document.getElementById("overlayContent");
+    Array.from(overlayContent.children).forEach(c=>{
+        if(c.id==="mainText" || c.id==="failActions") c.style.display="block";
+        else c.style.display="none";
+    });
+
+    document.getElementById("gameOverText").style.display = "block";
+    document.getElementById("failActions").style.display = "block";
+}
+
+/* EXIT GAME */
+function exitGame(){
+    running=false;
+    music.pause();
+    music.currentTime=0;
+    blocks=[];
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    const overlay=document.getElementById("overlay");
+    overlay.classList.remove("top");
+    const overlayContent=document.getElementById("overlayContent");
+    Array.from(overlayContent.children).forEach(c=>c.style.display="block");
+
+    const startBtn=document.getElementById("startBtn");
+    startBtn.textContent="Start Game";
+    startBtn.style.display="inline-block";
+
+    document.getElementById("controls").style.display="none";
+    document.getElementById("failActions").style.display="none";
+    document.getElementById("gameOverText").style.display="none";
+}
+
+/* TOGGLE MUSIC */
+function toggleMusic(){
+    const btn=document.getElementById("muteBtn");
+    if(music.paused){ music.play(); btn.textContent="Mute"; }
+    else { music.pause(); btn.textContent="Unmute"; }
+}
+</script>
+
+</body>
+</html>
