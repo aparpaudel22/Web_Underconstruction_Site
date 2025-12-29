@@ -18,6 +18,7 @@ canvas {
     position: fixed;
     inset: 0;
     z-index: 1;
+    touch-action: none;
 }
 
 .overlay {
@@ -182,7 +183,7 @@ function init() {
 
 /* INPUT */
 function moveCatcher(dx){
-    catcher.x += dx;
+    catcher.x += dx * 0.8;
     if(catcher.x<0) catcher.x=0;
     if(catcher.x+catcher.width>canvas.width) catcher.x = canvas.width - catcher.width;
 }
@@ -193,15 +194,28 @@ addEventListener("keydown", e=>{
 });
 
 // Mobile
-let touchStartX = null;
-canvas.addEventListener("touchstart", e => { touchStartX = e.touches[0].clientX; });
-canvas.addEventListener("touchmove", e => {
-    if(!running || touchStartX===null) return;
-    let dx = e.touches[0].clientX - touchStartX;
-    moveCatcher(dx);
+canvas.addEventListener("touchstart", e => {
+    if (!running) return;
+    e.preventDefault(); // 🚫 stop scrolling
     touchStartX = e.touches[0].clientX;
+}, { passive: false });
+
+canvas.addEventListener("touchmove", e => {
+    if (!running || touchStartX === null) return;
+    e.preventDefault(); // 🚫 stop scrolling
+
+    let currentX = e.touches[0].clientX;
+    let dx = currentX - touchStartX;
+
+    moveCatcher(dx);
+    touchStartX = currentX;
+}, { passive: false });
+
+canvas.addEventListener("touchend", e => {
+    touchStartX = null;
 });
-canvas.addEventListener("touchend", e=>{ touchStartX=null; });
+
+
 
 /* SPAWN BLOCK */
 function spawnBlock(){
