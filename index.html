@@ -179,6 +179,7 @@ footer {
 <audio id="failMusic" src="assets/Music2.mp3.mp3"></audio>
 
 <script>
+  let isMuted = false;
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 const music = document.getElementById("bgMusic");
@@ -412,10 +413,18 @@ function exitGame(){
 
 /* TOGGLE MUSIC */
 function toggleMusic(){
-    const btn=document.getElementById("muteBtn");
-    if(music.paused){ music.play(); btn.textContent="Mute"; }
-    else { music.pause(); btn.textContent="Unmute"; }
+    const btn = document.getElementById("muteBtn");
+    isMuted = !isMuted;
+
+    // Background music
+    bgMusic.muted = isMuted;
+
+    // Fail music
+    failMusic.muted = isMuted;
+
+    btn.textContent = isMuted ? "Unmute" : "Mute";
 }
+
 </script>
 
 </body>
